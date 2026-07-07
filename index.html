@@ -385,26 +385,9 @@ if (score > hiScore) {
 hiScore = score;
 hiScoreDisplay.textContent = hiScore;
 }
-alert(Game Over! Reason: ${reason}\nFinal Score: ${score});
-startBtn.style.visibility = 'visible';
-}
-
-
-
-### Setup Requirements to Run This Project
-1. **Hosting over HTTPS is Required:** Mobile web browsers (especially iOS Safari) will automatically block access to device motion and orientation sensors unless the site is loaded over a secure `https://` connection. For fast development testing, you can use services like **
-
-[GitHub Pages](https://pages.github.com/)
-
-** or **
-
-[Vercel](https://vercel.com/)
-
-** to host it completely free with built-in SSL.
-2. **Interaction Initialization Rule:** Browsers prevent web apps from monitoring sensors or speaking text out loud without a clean user tap event. The player must click the **"Play Game"** button to toggle permissions safely. 
-
-<FollowUp>
-Would you like me to build a **custom dashboard module** that lets you adjust the sensitivity thresholds for the motion controls if you find them too hard or too easy?
-</FollowUp>
-
-
+        alert(`Game Over! Reason: ${reason}\nFinal Score: ${score}`);
+        startBtn.style.visibility = 'visible';
+    }
+</script>
+</body>
+</html>
