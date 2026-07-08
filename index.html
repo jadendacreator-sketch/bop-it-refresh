@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bop It! Ultimate Fixed</title>
+    <title>Bop It! Refresh (Final Patch)</title>
     <style>
         body { margin: 0; background-color: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; user-select: none; }
         #command { font-size: 3rem; font-weight: bold; margin: 20px; text-transform: uppercase; color: #ffcc00; min-height: 4rem; }
@@ -30,30 +30,30 @@
     function tone(f, d, t='sine') { if (!audio) return; const o = audio.createOscillator(), g = audio.createGain(); o.type = t; o.frequency.value = f; g.gain.setValueAtTime(0.2, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + d); o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + d); }
     
     function speakAndRunCommand(txt) {
-        canScore = false; // Freeze everything while speaking
+        canScore = false; // Hard lock sensors immediately
         document.getElementById('status').style.color = '#ff3333';
         document.getElementById('status').textContent = "LISTEN TO COMMAND...";
         
         tone(350, 0.1, 'triangle');
         const u = new SpeechSynthesisUtterance(txt);
         u.rate = 1.4;
+        window.speechSynthesis.speak(u);
         
-        // This fires exactly when the iPad stops talking!
-        u.onend = function() {
+        // Timer Backup Fix: Bypass Safari's broken end signal with a direct unlock pause
+        setTimeout(() => {
             if (!isPlaying) return;
-            accHistory = []; // Reset old movement tracking
-            canScore = true; // Unlock sensors safely
+            accHistory = []; 
+            canScore = true; // Safely unlock game controls
             document.getElementById('status').style.color = '#00ff66';
             document.getElementById('status').textContent = "GO!";
             clearTimeout(timeout);
             timeout = setTimeout(() => lose(), timeLimit);
-        };
-        window.speechSynthesis.speak(u);
+        }, 1200); 
     }
     
     document.getElementById('start-btn').addEventListener('click', async () => {
         if (isPlaying) return;
-        window.speechSynthesis.cancel(); // Clear stuck voices
+        window.speechSynthesis.cancel(); 
         if (audio.state === 'suspended') await audio.resume();
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             const p = await DeviceOrientationEvent.requestPermission();
@@ -96,6 +96,7 @@
 </script>
 </body>
 </html>
+
 
 
 
