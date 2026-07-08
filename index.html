@@ -3,57 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bop It! Refresh (Final Patch)</title>
+    <title>Bop It! Retro Edition</title>
     <style>
         body { margin: 0; background-color: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; user-select: none; }
-        #command { font-size: 3rem; font-weight: bold; margin: 20px; text-transform: uppercase; color: #ffcc00; min-height: 4rem; }
-        #circle { width: 180px; height: 180px; border-radius: 50%; background: #222; border: 6px solid #ff3366; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; margin: 15px; }
-        .btn { background: #6600cc; color: white; border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; margin-top: 20px; font-weight: bold; }
-        #score-area, #title-area { padding: 10px; cursor: pointer; background: #222; border-radius: 10px; margin: 5px; min-width: 150px; }
-        #status { font-size: 1.2rem; font-weight: bold; margin-top: 10px; color: #666; }
+        #command { font-size: 3.5rem; font-weight: bold; margin: 20px; text-transform: uppercase; color: #ffcc00; min-height: 4.5rem; letter-spacing: 2px; }
+        #circle { width: 180px; height: 180px; border-radius: 50%; background: #222; border: 6px solid #ff3366; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; margin: 15px; box-shadow: 0 0 20px rgba(255, 51, 102, 0.3); }
+        .btn { background: #6600cc; color: white; border: none; padding: 15px 40px; font-size: 1.3rem; border-radius: 30px; margin-top: 20px; font-weight: bold; cursor: pointer; }
+        #score-area, #title-area { padding: 12px; cursor: pointer; background: #222; border-radius: 10px; margin: 5px; min-width: 160px; font-weight: bold; border: 2px solid #333; }
+        #score-area:active, #title-area:active { background: #333; }
     </style>
 </head>
 <body>
-    <div id="title-area"><h1>Bop It! Refresh</h1></div>
+    <div id="title-area">BOP IT! REFRESH</div>
     <div id="score-area">SCORE: <span id="score">0</span></div>
     <div id="command">TAP START</div>
     <div id="circle"><span id="lbl">START</span></div>
-    <div id="status">LISTEN...</div>
     <button id="start-btn" class="btn">PLAY GAME</button>
 <script>
-    let score = 0, isPlaying = false, currentCmd = null, timeout = null, timeLimit = 5000, canScore = false;
+    let score = 0, isPlaying = false, currentCmd = null, timeout = null, timeLimit = 4500, canScore = false;
     let lastY = 0, accHistory = [];
+    
     const cmds = ['BOP_IT','TWIST_IT','PULL_IT','HAMMER_IT','ANSWER_IT','DRINK_IT','SING_IT','WHIP_IT','SAW_IT','GOLF_IT'];
     const labels = {'BOP_IT':'Bop It!','TWIST_IT':'Twist It!','PULL_IT':'Pull It!','HAMMER_IT':'Hammer It!','ANSWER_IT':'Answer It!','DRINK_IT':'Drink It!','SING_IT':'Sing It!','WHIP_IT':'Whip It!','SAW_IT':'Saw It!','GOLF_IT':'Golf It!'};
+    
     const audio = new (window.AudioContext || window.webkitAudioContext)();
     
-    function tone(f, d, t='sine') { if (!audio) return; const o = audio.createOscillator(), g = audio.createGain(); o.type = t; o.frequency.value = f; g.gain.setValueAtTime(0.2, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + d); o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + d); }
+    function tone(f, d, t='sine') { 
+        if (!audio) return; 
+        const o = audio.createOscillator(), g = audio.createGain(); 
+        o.type = t; 
+        o.frequency.value = f; 
+        g.gain.setValueAtTime(0.2, audio.currentTime); 
+        g.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + d); 
+        o.connect(g); 
+        g.connect(audio.destination); 
+        o.start(); 
+        o.stop(audio.currentTime + d); 
+    }
+
+    // Custom distinct arcade sound cues for each move so you can play by ear!
+    function playActionSound(cmd) {
+        if (cmd === 'BOP_IT') tone(440, 0.15, 'triangle');
+        else if (cmd === 'TWIST_IT') { tone(600, 0.1, 'sawtooth'); setTimeout(() => tone(750, 0.1, 'sawtooth'), 60); }
+        else if (cmd === 'PULL_IT') { tone(500, 0.15, 'sine'); setTimeout(() => tone(300, 0.15, 'sine'), 80); }
+        else if (cmd === 'HAMMER_IT') tone(200, 0.3, 'sawtooth');
+        else if (cmd === 'ANSWER_IT') { tone(900, 0.08); setTimeout(() => tone(900, 0.08), 100); }
+        else if (cmd === 'DRINK_IT') { tone(300, 0.1); setTimeout(() => tone(450, 0.1), 50); setTimeout(() => tone(600, 0.1), 100); }
+        else if (cmd === 'SING_IT') tone(580, 0.4, 'sine');
+        else if (cmd === 'WHIP_IT') { tone(800, 0.05, 'sawtooth'); setTimeout(() => tone(200, 0.2, 'sawtooth'), 40); }
+        else if (cmd === 'SAW_IT') { tone(250, 0.08, 'sawtooth'); setTimeout(() => tone(220, 0.08, 'sawtooth'), 90); }
+        else if (cmd === 'GOLF_IT') { tone(400, 0.05); setTimeout(() => tone(1000, 0.15), 50); }
+    }
     
-    function speakAndRunCommand(txt) {
-        canScore = false; // Hard lock sensors immediately
-        document.getElementById('status').style.color = '#ff3333';
-        document.getElementById('status').textContent = "LISTEN TO COMMAND...";
+    function runCommand(cmd) {
+        canScore = false; 
+        document.getElementById('command').textContent = labels[cmd];
+        playActionSound(cmd);
         
-        tone(350, 0.1, 'triangle');
-        const u = new SpeechSynthesisUtterance(txt);
-        u.rate = 1.4;
-        window.speechSynthesis.speak(u);
-        
-        // Timer Backup Fix: Bypass Safari's broken end signal with a direct unlock pause
+        // Give the player a quick 250ms buffer window to hear the sound before unlocking sensors
         setTimeout(() => {
             if (!isPlaying) return;
             accHistory = []; 
-            canScore = true; // Safely unlock game controls
-            document.getElementById('status').style.color = '#00ff66';
-            document.getElementById('status').textContent = "GO!";
+            canScore = true; 
             clearTimeout(timeout);
             timeout = setTimeout(() => lose(), timeLimit);
-        }, 1200); 
+        }, 250); 
     }
     
     document.getElementById('start-btn').addEventListener('click', async () => {
         if (isPlaying) return;
-        window.speechSynthesis.cancel(); 
         if (audio.state === 'suspended') await audio.resume();
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             const p = await DeviceOrientationEvent.requestPermission();
@@ -89,14 +107,10 @@
         if (currentCmd === 'SING_IT' && Math.abs(b) > 145) win();
     }
 
-    function run() { isPlaying = true; score = 0; timeLimit = 5000; canScore = false; document.getElementById('score').textContent = score; document.getElementById('start-btn').style.visibility = 'hidden'; document.getElementById('lbl').textContent = 'BOP'; next(); }
-    function next() { if (!isPlaying) return; currentCmd = cmds[Math.floor(Math.random() * cmds.length)]; document.getElementById('command').textContent = labels[currentCmd]; speakAndRunCommand(labels[currentCmd]); }
-    function win() { canScore = false; clearTimeout(timeout); score++; document.getElementById('score').textContent = score; timeLimit = Math.max(2200, 5000 - (score * 60)); tone(880, 0.1); setTimeout(next, 600); }
-    function lose() { isPlaying = false; canScore = false; clearTimeout(timeout); window.speechSynthesis.cancel(); tone(130, 0.6, 'sawtooth'); document.getElementById('command').textContent = "GAME OVER"; document.getElementById('lbl').textContent = 'START'; document.getElementById('status').textContent = "LISTEN..."; document.getElementById('start-btn').style.visibility = 'visible'; alert('Game Over! Your Score: ' + score); }
+    function run() { isPlaying = true; score = 0; timeLimit = 4500; canScore = false; document.getElementById('score').textContent = score; document.getElementById('start-btn').style.visibility = 'hidden'; document.getElementById('lbl').textContent = 'BOP'; next(); }
+    function next() { if (!isPlaying) return; currentCmd = cmds[Math.floor(Math.random() * cmds.length)]; runCommand(currentCmd); }
+    function win() { canScore = false; clearTimeout(timeout); score++; document.getElementById('score').textContent = score; timeLimit = Math.max(2200, 4500 - (score * 60)); tone(1000, 0.08); setTimeout(next, 500); }
+    function lose() { isPlaying = false; canScore = false; clearTimeout(timeout); tone(100, 0.6, 'sawtooth'); document.getElementById('command').textContent = "GAME OVER"; document.getElementById('lbl').textContent = 'START'; document.getElementById('start-btn').style.visibility = 'visible'; alert('Game Over! Your Score: ' + score); }
 </script>
 </body>
 </html>
-
-
-
-
