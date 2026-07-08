@@ -3,27 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bop It!</title>
+    <title>Bop It! Refresh</title>
     <style>
-        body { margin: 0; background-color: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
-        #command { font-size: 3rem; font-weight: bold; margin: 30px; text-transform: uppercase; }
-        #circle { width: 200px; height: 200px; border-radius: 50%; background: #222; border: 5px solid #ff3366; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
-        .btn { background: #6600cc; color: white; border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; margin-top: 30px; }
+        body { margin: 0; background-color: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; user-select: none; }
+        #command { font-size: 3rem; font-weight: bold; margin: 20px; text-transform: uppercase; color: #ffcc00; }
+        #circle { width: 180px; height: 180px; border-radius: 50%; background: #222; border: 6px solid #ff3366; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; margin: 15px; }
+        .btn { background: #6600cc; color: white; border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; margin-top: 20px; font-weight: bold; }
+        #score-area, #title-area { padding: 10px; cursor: pointer; background: #222; border-radius: 10px; margin: 5px; min-width: 150px; }
     </style>
 </head>
 <body>
-    <h1>Bop It!</h1>
-    <div>SCORE: <span id="score">0</span></div>
+    <div id="title-area"><h1>Bop It! Refresh</h1></div>
+    <div id="score-area">SCORE: <span id="score">0</span></div>
     <div id="command">TAP START</div>
     <div id="circle"><span id="lbl">START</span></div>
     <button id="start-btn" class="btn">PLAY GAME</button>
 <script>
-    let score = 0, isPlaying = false, currentCommand = null, timeout = null;
-    const cmds = ['BOP_IT', 'TWIST_IT', 'PULL_IT', 'HAMMER_IT', 'ANSWER_IT'];
-    const labels = {'BOP_IT':'Bop It!', 'TWIST_IT':'Twist It!', 'PULL_IT':'Pull It!', 'HAMMER_IT':'Hammer It!', 'ANSWER_IT':'Answer It!'};
+    let score = 0, isPlaying = false, currentCmd = null, timeout = null, timeLimit = 3500;
+    let lastY = 0, accHistory = [];
+    const cmds = ['BOP_IT','TWIST_IT','PULL_IT','HAMMER_IT','ANSWER_IT','DRINK_IT','SING_IT','WHIP_IT','SAW_IT','GOLF_IT'];
+    const labels = {'BOP_IT':'Bop It!','TWIST_IT':'Twist It!','PULL_IT':'Pull It!','HAMMER_IT':'Hammer It!','ANSWER_IT':'Answer It!','DRINK_IT':'Drink It!','SING_IT':'Sing It!','WHIP_IT':'Whip It!','SAW_IT':'Saw It!','GOLF_IT':'Golf It!'};
     const audio = new (window.AudioContext || window.webkitAudioContext)();
-    function tone(f, d) { if (!audio) return; const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = f; g.gain.setValueAtTime(0.2, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + d); o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + d); }
-    function speak(txt) { tone(400, 0.1); const u = new SpeechSynthesisUtterance(txt); u.rate = 1.4; window.speechSynthesis.speak(u); }
+    function tone(f, d, t='sine') { if (!audio) return; const o = audio.createOscillator(), g = audio.createGain(); o.type = t; o.frequency.value = f; g.gain.setValueAtTime(0.2, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + d); o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + d); }
+    function speak(txt) { tone(350, 0.1, 'triangle'); const u = new SpeechSynthesisUtterance(txt); u.rate = 1.5; window.speechSynthesis.speak(u); }
     document.getElementById('start-btn').addEventListener('click', async () => {
         if (isPlaying) return;
         if (audio.state === 'suspended') await audio.resume();
@@ -32,13 +34,35 @@
             if (p === 'granted') { window.addEventListener('deviceorientation', orient); window.addEventListener('devicemotion', motion); run(); }
         } else { window.addEventListener('deviceorientation', orient); window.addEventListener('devicemotion', motion); run(); }
     });
-    document.getElementById('circle').addEventListener('click', () => { if(isPlaying && currentCommand==='BOP_IT') win(); else if(isPlaying) lose(); });
-    function motion(e) { if (!isPlaying) return; let y = e.accelerationIncludingGravity?.y || 0; if (currentCommand === 'HAMMER_IT' && y < -12) win(); }
-    function orient(e) { if (!isPlaying) return; let g = e.gamma || 0; if (currentCommand === 'ANSWER_IT' && Math.abs(g) > 75) win(); }
-    function run() { isPlaying = true; score = 0; document.getElementById('score').textContent = score; document.getElementById('start-btn').style.visibility = 'hidden'; document.getElementById('lbl').textContent = 'BOP'; next(); }
-    function next() { if (!isPlaying) return; currentCommand = cmds[Math.floor(Math.random() * cmds.length)]; document.getElementById('command').textContent = labels[currentCommand]; speak(labels[currentCommand]); clearTimeout(timeout); timeout = setTimeout(() => lose(), 3000); }
-    function win() { clearTimeout(timeout); score++; document.getElementById('score').textContent = score; tone(800, 0.1); setTimeout(next, 600); }
-    function lose() { isPlaying = false; clearTimeout(timeout); tone(150, 0.5); document.getElementById('command').textContent = "GAME OVER"; document.getElementById('lbl').textContent = 'START'; document.getElementById('start-btn').style.visibility = 'visible'; alert('Game Over! Score: ' + score); }
+    document.getElementById('circle').addEventListener('click', () => { if(isPlaying && currentCmd==='BOP_IT') win(); else if(isPlaying) lose(); });
+    document.getElementById('score-area').addEventListener('click', () => { if(isPlaying && currentCmd==='TWIST_IT') win(); });
+    document.getElementById('title-area').addEventListener('click', () => { if(isPlaying && currentCmd==='PULL_IT') win(); });
+    function motion(ev) {
+        if (!isPlaying) return;
+        let acc = ev.accelerationIncludingGravity || ev.acceleration || {x:0, y:0, z:0};
+        let x = acc.x || 0, y = acc.y || 0, z = acc.z || 0;
+        accHistory.push({x, y, z}); if(accHistory.length > 10) accHistory.shift();
+        if (currentCmd === 'HAMMER_IT' && y < -12) win();
+        if (currentCmd === 'WHIP_IT' && y > 12 && lastY < -5) win();
+        if (currentCmd === 'SAW_IT') {
+            let zSpikes = accHistory.filter(a => Math.abs(a.z) > 10).length;
+            if (zSpikes > 3) win();
+        }
+        if (currentCmd === 'GOLF_IT' && Math.abs(x) > 14) win();
+        lastY = y;
+    }
+    function orient(ev) {
+        if (!isPlaying) return;
+        let b = ev.beta || 0, g = ev.gamma || 0;
+        if (currentCmd === 'ANSWER_IT' && Math.abs(g) > 75) win();
+        if (currentCmd === 'DRINK_IT' && b < 15 && b > -15) win();
+        if (currentCmd === 'SING_IT' && Math.abs(b) > 145) win();
+    }
+    function run() { isPlaying = true; score = 0; timeLimit = 3500; document.getElementById('score').textContent = score; document.getElementById('start-btn').style.visibility = 'hidden'; document.getElementById('lbl').textContent = 'BOP'; next(); }
+    function next() { if (!isPlaying) return; currentCmd = cmds[Math.floor(Math.random() * cmds.length)]; document.getElementById('command').textContent = labels[currentCmd]; speak(labels[currentCmd]); clearTimeout(timeout); timeout = setTimeout(() => lose(), timeLimit); }
+    function win() { clearTimeout(timeout); score++; document.getElementById('score').textContent = score; timeLimit = Math.max(1300, 3500 - (score * 100)); tone(880, 0.1); accHistory = []; setTimeout(next, 500); }
+    function lose() { isPlaying = false; clearTimeout(timeout); tone(130, 0.6, 'sawtooth'); document.getElementById('command').textContent = "GAME OVER"; document.getElementById('lbl').textContent = 'START'; document.getElementById('start-btn').style.visibility = 'visible'; alert('Game Over! Your Score: ' + score); }
 </script>
 </body>
 </html>
+
