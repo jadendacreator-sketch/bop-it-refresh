@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bop It! Refresh</title>
+    <title>Bop It! Refresh (Glitch Proof)</title>
     <style>
         body { margin: 0; background-color: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; user-select: none; }
-        #command { font-size: 3rem; font-weight: bold; margin: 20px; text-transform: uppercase; color: #ffcc00; }
+        #command { font-size: 3rem; font-weight: bold; margin: 20px; text-transform: uppercase; color: #ffcc00; min-height: 4rem; }
         #circle { width: 180px; height: 180px; border-radius: 50%; background: #222; border: 6px solid #ff3366; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; margin: 15px; }
         .btn { background: #6600cc; color: white; border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; margin-top: 20px; font-weight: bold; }
         #score-area, #title-area { padding: 10px; cursor: pointer; background: #222; border-radius: 10px; margin: 5px; min-width: 150px; }
+        #status-light { font-size: 1.2rem; font-weight: bold; margin-top: 10px; height: 20px; }
+        .ready { color: #00ff66; }
+        .wait { color: #ff3333; }
     </style>
 </head>
 <body>
@@ -17,15 +20,18 @@
     <div id="score-area">SCORE: <span id="score">0</span></div>
     <div id="command">TAP START</div>
     <div id="circle"><span id="lbl">START</span></div>
+    <div id="status-light"></div>
     <button id="start-btn" class="btn">PLAY GAME</button>
 <script>
-    let score = 0, isPlaying = false, currentCmd = null, timeout = null, timeLimit = 3500;
-    let lastY = 0, accHistory = [];
+    let score = 0, isPlaying = false, currentCmd = null, timeout = null, timeLimit = 5000, canScore = false;
+    let isResetting = false, lastY = 0, accHistory = [];
     const cmds = ['BOP_IT','TWIST_IT','PULL_IT','HAMMER_IT','ANSWER_IT','DRINK_IT','SING_IT','WHIP_IT','SAW_IT','GOLF_IT'];
     const labels = {'BOP_IT':'Bop It!','TWIST_IT':'Twist It!','PULL_IT':'Pull It!','HAMMER_IT':'Hammer It!','ANSWER_IT':'Answer It!','DRINK_IT':'Drink It!','SING_IT':'Sing It!','WHIP_IT':'Whip It!','SAW_IT':'Saw It!','GOLF_IT':'Golf It!'};
     const audio = new (window.AudioContext || window.webkitAudioContext)();
+    
     function tone(f, d, t='sine') { if (!audio) return; const o = audio.createOscillator(), g = audio.createGain(); o.type = t; o.frequency.value = f; g.gain.setValueAtTime(0.2, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + d); o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + d); }
-    function speak(txt) { tone(350, 0.1, 'triangle'); const u = new SpeechSynthesisUtterance(txt); u.rate = 1.5; window.speechSynthesis.speak(u); }
+    function speak(txt) { tone(350, 0.1, 'triangle'); const u = new SpeechSynthesisUtterance(txt); u.rate = 1.3; window.speechSynthesis.speak(u); }
+    
     document.getElementById('start-btn').addEventListener('click', async () => {
         if (isPlaying) return;
         if (audio.state === 'suspended') await audio.resume();
@@ -34,14 +40,26 @@
             if (p === 'granted') { window.addEventListener('deviceorientation', orient); window.addEventListener('devicemotion', motion); run(); }
         } else { window.addEventListener('deviceorientation', orient); window.addEventListener('devicemotion', motion); run(); }
     });
-    document.getElementById('circle').addEventListener('click', () => { if(isPlaying && currentCmd==='BOP_IT') win(); else if(isPlaying) lose(); });
-    document.getElementById('score-area').addEventListener('click', () => { if(isPlaying && currentCmd==='TWIST_IT') win(); });
-    document.getElementById('title-area').addEventListener('click', () => { if(isPlaying && currentCmd==='PULL_IT') win(); });
+
+    document.getElementById('circle').addEventListener('click', () => { if(isPlaying && canScore && !isResetting && currentCmd==='BOP_IT') win(); else if(isPlaying && canScore && !isResetting) lose(); });
+    document.getElementById('score-area').addEventListener('click', () => { if(isPlaying && canScore && !isResetting && currentCmd==='TWIST_IT') win(); });
+    document.getElementById('title-area').addEventListener('click', () => { if(isPlaying && canScore && !isResetting && currentCmd==='PULL_IT') win(); });
+
     function motion(ev) {
-        if (!isPlaying) return;
         let acc = ev.accelerationIncludingGravity || ev.acceleration || {x:0, y:0, z:0};
         let x = acc.x || 0, y = acc.y || 0, z = acc.z || 0;
+        
+        // If checking for reset, look for low movement forces
+        if (isResetting) {
+            if (Math.abs(x) < 3 && Math.abs(y) < 3 && Math.abs(z) < 3) {
+                checkOrientationForReset();
+            }
+            return;
+        }
+
+        if (!isPlaying || !canScore) return;
         accHistory.push({x, y, z}); if(accHistory.length > 10) accHistory.shift();
+        
         if (currentCmd === 'HAMMER_IT' && y < -12) win();
         if (currentCmd === 'WHIP_IT' && y > 12 && lastY < -5) win();
         if (currentCmd === 'SAW_IT') {
@@ -51,18 +69,58 @@
         if (currentCmd === 'GOLF_IT' && Math.abs(x) > 14) win();
         lastY = y;
     }
+
+    let currentBeta = 0, currentGamma = 0;
     function orient(ev) {
-        if (!isPlaying) return;
-        let b = ev.beta || 0, g = ev.gamma || 0;
-        if (currentCmd === 'ANSWER_IT' && Math.abs(g) > 75) win();
-        if (currentCmd === 'DRINK_IT' && b < 15 && b > -15) win();
-        if (currentCmd === 'SING_IT' && Math.abs(b) > 145) win();
+        currentBeta = ev.beta || 0;
+        currentGamma = ev.gamma || 0;
+
+        if (!isPlaying || !canScore || isResetting) return;
+        if (currentCmd === 'ANSWER_IT' && Math.abs(currentGamma) > 75) win();
+        if (currentCmd === 'DRINK_IT' && currentBeta < 15 && currentBeta > -15) win();
+        if (currentCmd === 'SING_IT' && Math.abs(currentBeta) > 145) win();
     }
-    function run() { isPlaying = true; score = 0; timeLimit = 3500; document.getElementById('score').textContent = score; document.getElementById('start-btn').style.visibility = 'hidden'; document.getElementById('lbl').textContent = 'BOP'; next(); }
-    function next() { if (!isPlaying) return; currentCmd = cmds[Math.floor(Math.random() * cmds.length)]; document.getElementById('command').textContent = labels[currentCmd]; speak(labels[currentCmd]); clearTimeout(timeout); timeout = setTimeout(() => lose(), timeLimit); }
-    function win() { clearTimeout(timeout); score++; document.getElementById('score').textContent = score; timeLimit = Math.max(1300, 3500 - (score * 100)); tone(880, 0.1); accHistory = []; setTimeout(next, 500); }
-    function lose() { isPlaying = false; clearTimeout(timeout); tone(130, 0.6, 'sawtooth'); document.getElementById('command').textContent = "GAME OVER"; document.getElementById('lbl').textContent = 'START'; document.getElementById('start-btn').style.visibility = 'visible'; alert('Game Over! Your Score: ' + score); }
+
+    function checkOrientationForReset() {
+        // iPad must return close to level/flat posture (Beta around 45-70 or flat depending on hold)
+        // To make it easy, we just ensure it left the extreme triggers (Ear, Upside down, or Flat face tilt)
+        if (Math.abs(currentGamma) < 40 && Math.abs(currentBeta) > 30 && Math.abs(currentBeta) < 110) {
+            isResetting = false;
+            document.getElementById('status-light').className = "ready";
+            document.getElementById('status-light').textContent = "READY";
+            setTimeout(next, 400); // Safely prompt next command
+        }
+    }
+
+    function run() { isPlaying = true; score = 0; timeLimit = 5000; canScore = false; isResetting = false; document.getElementById('score').textContent = score; document.getElementById('start-btn').style.visibility = 'hidden'; document.getElementById('lbl').textContent = 'BOP'; next(); }
+    
+    function next() { 
+        if (!isPlaying) return; 
+        canScore = true; 
+        currentCmd = cmds[Math.floor(Math.random() * cmds.length)]; 
+        document.getElementById('command').textContent = labels[currentCmd]; 
+        speak(labels[currentCmd]); 
+        clearTimeout(timeout); 
+        timeout = setTimeout(() => lose(), timeLimit); 
+    }
+    
+    function win() { 
+        canScore = false; 
+        isResetting = true;
+        clearTimeout(timeout); 
+        score++; 
+        document.getElementById('score').textContent = score; 
+        timeLimit = Math.max(2200, 5000 - (score * 50)); 
+        tone(880, 0.1); 
+        accHistory = []; 
+        document.getElementById('command').textContent = "BRING BACK TO CENTER!";
+        document.getElementById('status-light').className = "wait";
+        document.getElementById('status-light').textContent = "HOLD FLAT...";
+    }
+    
+    function lose() { isPlaying = false; canScore = false; isResetting = false; clearTimeout(timeout); tone(130, 0.6, 'sawtooth'); document.getElementById('command').textContent = "GAME OVER"; document.getElementById('lbl').textContent = 'START'; document.getElementById('status-light').textContent = ""; document.getElementById('start-btn').style.visibility = 'visible'; alert('Game Over! Your Score: ' + score); }
 </script>
 </body>
 </html>
+
 
