@@ -1,393 +1,44 @@
-
-
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bop It!Refresh</title>
+    <title>Bop It!</title>
     <style>
-        :root {
-            --bop-color: #ff3366;
-            --twist-color: #ffcc00;
-            --pull-color: #33ccff;
-            --motion-color: #a040ff;
-        }
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        #game-container {
-            width: 100%;
-            max-width: 500px;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            padding: 40px 20px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-        header {
-            width: 100%;
-        }
-        h1 {
-            font-size: 2.5rem;
-            margin: 0;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            background: linear-gradient(45deg, var(--bop-color), var(--twist-color), var(--pull-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .score-board {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            margin-top: 15px;
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-        .score-val {
-            color: var(--twist-color);
-            font-size: 1.5rem;
-        }
-        #display-area {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-        }
-        #command-text {
-            font-size: 3.5rem;
-            font-weight: 900;
-            text-transform: uppercase;
-            margin: 20px 0;
-            min-height: 5rem;
-            transition: transform 0.1s ease;
-        }
-        #action-surface {
-            width: 260px;
-            height: 260px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #2a2a2a 0%, #1a1a1a 100%);
-            border: 8px solid #333;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: all 0.2s ease;
-            cursor: pointer;
-            position: relative;
-        }
-        #action-surface:active {
-            transform: scale(0.95);
-        }
-        .btn {
-            background: linear-gradient(135deg, #a040ff 0%, #6600cc 100%);
-            border: none;
-            color: white;
-            padding: 15px 40px;
-            font-size: 1.3rem;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 5px 15px rgba(160, 64, 255, 0.4);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .btn:active {
-            transform: scale(0.98);
-        }
-        #debug-panel {
-            font-family: monospace;
-            font-size: 0.8rem;
-            color: #666;
-            margin-top: 10px;
-            max-height: 60px;
-            overflow: hidden;
-            width: 100%;
-        }
-        /* States mapped to colors */
-        .state-BOP_IT { --current-color: var(--bop-color); }
-        .state-TWIST_IT { --current-color: var(--twist-color); }
-        .state-PULL_IT { --current-color: var(--pull-color); }
-        .state-HAMMER_IT, .state-ANSWER_IT, .state-DRINK_IT, .state-SING_IT { --current-color: var(--motion-color); }
-        
-        .pulse {
-            animation: pulse-border 0.5s infinite alternate;
-        }
-        @keyframes pulse-border {
-            from { border-color: #333; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-            to { border-color: var(--current-color); box-shadow: 0 0 25px var(--current-color); }
-        }
+        body { margin: 0; background-color: #121212; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
+        #command { font-size: 3rem; font-weight: bold; margin: 30px; text-transform: uppercase; }
+        #circle { width: 200px; height: 200px; border-radius: 50%; background: #222; border: 5px solid #ff3366; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
+        .btn { background: #6600cc; color: white; border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 30px; margin-top: 30px; }
     </style>
 </head>
-<body class="state-BOP_IT">
-
-    <div id="game-container">
-        <header>
-            <h1>Bop It! Motion</h1>
-            <div class="score-board">
-                <div>SCORE: <span id="score" class="score-val">0</span></div>
-                <div>HI SCORE: <span id="hi-score" class="score-val">0</span></div>
-            </div>
-        </header>
-
-        <div id="display-area">
-            <div id="command-text">TAP START</div>
-            
-            <div id="action-surface" class="">
-                <span id="surface-label">START</span>
-            </div>
-        </div>
-
-        <button id="start-btn" class="btn">Play Game</button>
-
-        <div id="debug-panel">
-            Acc Y: <span id="d-accy">0</span> | Beta: <span id="d-beta">0</span> | Gamma: <span id="d-gamma">0</span>
-        </div>
-    </div>
-
+<body>
+    <h1>Bop It!</h1>
+    <div>SCORE: <span id="score">0</span></div>
+    <div id="command">TAP START</div>
+    <div id="circle"><span id="lbl">START</span></div>
+    <button id="start-btn" class="btn">PLAY GAME</button>
 <script>
-    // Game Core State Variables
-    let score = 0;
-    let hiScore = 0;
-    let isPlaying = false;
-    let currentCommand = null;
-    let commandTimeout = null;
-    let timeLimit = 3000; // Starting window (3 seconds)
-    
-    // Command lists split by type
-    const touchCommands = ['BOP_IT', 'TWIST_IT', 'PULL_IT'];
-    const motionCommands = ['HAMMER_IT', 'ANSWER_IT', 'DRINK_IT', 'SING_IT'];
-    const allCommands = [...touchCommands, ...motionCommands];
-
-    const commandLabels = {
-        'BOP_IT': 'Bop It!',
-        'TWIST_IT': 'Twist It!',
-        'PULL_IT': 'Pull It!',
-        'HAMMER_IT': 'Hammer It!',
-        'ANSWER_IT': 'Answer It!',
-        'DRINK_IT': 'Drink It!',
-        'SING_IT': 'Sing It!'
-    };
-
-    // UI Elements
-    const startBtn = document.getElementById('start-btn');
-    const commandText = document.getElementById('command-text');
-    const actionSurface = document.getElementById('action-surface');
-    const surfaceLabel = document.getElementById('surface-label');
-    const scoreDisplay = document.getElementById('score');
-    const hiScoreDisplay = document.getElementById('hi-score');
-    
-    // Debug elements
-    const dAccy = document.getElementById('d-accy');
-    const dBeta = document.getElementById('d-beta');
-    const dGamma = document.getElementById('d-gamma');
-
-    // Audio Engine Elements (Using Synthesized Browser Tones to avoid external asset dependency)
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-    function playTone(freq, duration, type = 'sine') {
-        if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-        osc.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + duration);
-    }
-
-    function speakCommand(command) {
-        // Fallback tone sequence combined with Text to Speech
-        if (command === 'BOP_IT') playTone(440, 0.15, 'square');
-        else if (command === 'TWIST_IT') playTone(587, 0.2, 'sawtooth');
-        else if (command === 'PULL_IT') playTone(293, 0.25, 'triangle');
-        else playTone(349, 0.2, 'sine'); // Motion alert sound
-
-        const utterance = new SpeechSynthesisUtterance(commandLabels[command]);
-        utterance.rate = 1.4;
-        window.speechSynthesis.speak(utterance);
-    }
-
-    // Initialize & Request Permissions
-    startBtn.addEventListener('click', async () => {
+    let score = 0, isPlaying = false, currentCommand = null, timeout = null;
+    const cmds = ['BOP_IT', 'TWIST_IT', 'PULL_IT', 'HAMMER_IT', 'ANSWER_IT'];
+    const labels = {'BOP_IT':'Bop It!', 'TWIST_IT':'Twist It!', 'PULL_IT':'Pull It!', 'HAMMER_IT':'Hammer It!', 'ANSWER_IT':'Answer It!'};
+    const audio = new (window.AudioContext || window.webkitAudioContext)();
+    function tone(f, d) { if (!audio) return; const o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = f; g.gain.setValueAtTime(0.2, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audio.currentTime + d); o.connect(g); g.connect(audio.destination); o.start(); o.stop(audio.currentTime + d); }
+    function speak(txt) { tone(400, 0.1); const u = new SpeechSynthesisUtterance(txt); u.rate = 1.4; window.speechSynthesis.speak(u); }
+    document.getElementById('start-btn').addEventListener('click', async () => {
         if (isPlaying) return;
-        
-        // Audio activation context
-        if (audioCtx.state === 'suspended') {
-            await audioCtx.resume();
-        }
-
-        // Request iOS Motion Sensor Permission
+        if (audio.state === 'suspended') await audio.resume();
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            try {
-                const permissionState = await DeviceOrientationEvent.requestPermission();
-                if (permissionState === 'granted') {
-                    window.addEventListener('deviceorientation', handleOrientation);
-                    window.addEventListener('devicemotion', handleMotion);
-                    startGame();
-                } else {
-                    alert('Motion permissions are required to scan physical movements!');
-                }
-            } catch (error) {
-                console.error(error);
-                alert('Error initializing sensor permissions.');
-            }
-        } else {
-            // Android or Desktop backup alternative
-            window.addEventListener('deviceorientation', handleOrientation);
-            window.addEventListener('devicemotion', handleMotion);
-            startGame();
-        }
+            const p = await DeviceOrientationEvent.requestPermission();
+            if (p === 'granted') { window.addEventListener('deviceorientation', orient); window.addEventListener('devicemotion', motion); run(); }
+        } else { window.addEventListener('deviceorientation', orient); window.addEventListener('devicemotion', motion); run(); }
     });
-
-    // Touch Interaction Mappings
-    actionSurface.addEventListener('click', () => {
-        if (!isPlaying) return;
-        if (currentCommand === 'BOP_IT') {
-            success();
-        } else {
-            fail('JUST DO WHAT IT SAYS!');
-        }
-    });
-
-    // Handle Swipes (Twist It / Pull It simulation)
-    let touchStartX = 0;
-    let touchStartY = 0;
-    actionSurface.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
-        touchStartY = e.changedTouches[0].screenY;
-    }, {passive: true});
-
-    actionSurface.addEventListener('touchend', (e) => {
-        if (!isPlaying) return;
-        const diffX = e.changedTouches[0].screenX - touchStartX;
-
-const diffY = e.changedTouches[0].screenY - touchStartY;
-// Horizonal Swipe = Twist It!
-if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
-if (currentCommand === 'TWIST_IT') success();
-else fail('Incorrect Input Action!');
-}
-// Vertical Swipe = Pull It!
-else if (Math.abs(diffY) > 40 && Math.abs(diffY) > Math.abs(diffX)) {
-if (currentCommand === 'PULL_IT') success();
-else fail('Incorrect Input Action!');
-}
-}, {passive: true});
-// Motion Sensor Processing Logics
-let lastY = 0;
-function handleMotion(event) {
-if (!isPlaying) return;
-let acc = event.accelerationIncludingGravity || event.acceleration;
-if (!acc) return;
-let y = acc.y || 0;
-dAccy.textContent = y.toFixed(1);
-// Hammer It! Detection: Fast Downward Snap (Negative Y force drop threshold)
-if (currentCommand === 'HAMMER_IT' && y < -13) {
-success();
-}
-}
-function handleOrientation(event) {
-if (!isPlaying) return;
-let beta = event.beta; // Front/Back (-180 to 180)
-let gamma = event.gamma; // Left/Right (-90 to 90)
-dBeta.textContent = Math.round(beta);
-dGamma.textContent = Math.round(gamma);
-if (!beta || !gamma) return;
-// Position Event Matching Checks
-if (currentCommand === 'ANSWER_IT' && Math.abs(gamma) > 75) {
-// Tilted completely sideways up right or left against human ear
-success();
-}
-else if (currentCommand === 'DRINK_IT' && beta < 20 && beta > -10) {
-// Tilted down flat horizontally forward pointing into mouth axis
-success();
-}
-else if (currentCommand === 'SING_IT' && Math.abs(beta) > 140) {
-// Held upside down directly vertical like microphone point
-success();
-}
-}
-// Core Game Mechanics Loops
-function startGame() {
-score = 0;
-timeLimit = 3000;
-isPlaying = true;
-scoreDisplay.textContent = score;
-startBtn.style.visibility = 'hidden';
-surfaceLabel.textContent = 'BOP HERE';
-actionSurface.classList.add('pulse');
-playTone(523.25, 0.1); // Game initialization chirp
-setTimeout(nextCommand, 800);
-}
-function nextCommand() {
-if (!isPlaying) return;
-// Pick new random command
-const randomIndex = Math.floor(Math.random() * allCommands.length);
-currentCommand = allCommands[randomIndex];
-// Dynamically style based on command theme colors
-document.body.className = state-${currentCommand};
-commandText.textContent = commandLabels[currentCommand];
-commandText.style.transform = "scale(1.1)";
-setTimeout(() => commandText.style.transform = "scale(1)", 100);
-speakCommand(currentCommand);
-// Track timer speed multiplier reduction windows
-clearTimeout(commandTimeout);
-commandTimeout = setTimeout(() => {
-fail('Too Slow!');
-}, timeLimit);
-}
-function success() {
-clearTimeout(commandTimeout);
-score++;
-scoreDisplay.textContent = score;
-// Dynamic Difficulty Scaling
-timeLimit = Math.max(1200, 3000 - (score * 120));
-// Success conformation ding sound
-playTone(880, 0.1, 'sine');
-document.body.className = '';
-commandText.textContent = "GOOD!";
-setTimeout(nextCommand, 600);
-}
-function fail(reason) {
-isPlaying = false;
-clearTimeout(commandTimeout);
-// Game Over buzzer audio sound
-playTone(150, 0.6, 'sawtooth');
-commandText.textContent = "GAME OVER";
-surfaceLabel.textContent = 'START';
-actionSurface.classList.remove('pulse');
-document.body.className = 'state-BOP_IT';
-if (score > hiScore) {
-hiScore = score;
-hiScoreDisplay.textContent = hiScore;
-}
-        alert(`Game Over! Reason: ${reason}\nFinal Score: ${score}`);
-        startBtn.style.visibility = 'visible';
-    }
+    document.getElementById('circle').addEventListener('click', () => { if(isPlaying && currentCommand==='BOP_IT') win(); else if(isPlaying) lose(); });
+    function motion(e) { if (!isPlaying) return; let y = e.accelerationIncludingGravity?.y || 0; if (currentCommand === 'HAMMER_IT' && y < -12) win(); }
+    function orient(e) { if (!isPlaying) return; let g = e.gamma || 0; if (currentCommand === 'ANSWER_IT' && Math.abs(g) > 75) win(); }
+    function run() { isPlaying = true; score = 0; document.getElementById('score').textContent = score; document.getElementById('start-btn').style.visibility = 'hidden'; document.getElementById('lbl').textContent = 'BOP'; next(); }
+    function next() { if (!isPlaying) return; currentCommand = cmds[Math.floor(Math.random() * cmds.length)]; document.getElementById('command').textContent = labels[currentCommand]; speak(labels[currentCommand]); clearTimeout(timeout); timeout = setTimeout(() => lose(), 3000); }
+    function win() { clearTimeout(timeout); score++; document.getElementById('score').textContent = score; tone(800, 0.1); setTimeout(next, 600); }
+    function lose() { isPlaying = false; clearTimeout(timeout); tone(150, 0.5); document.getElementById('command').textContent = "GAME OVER"; document.getElementById('lbl').textContent = 'START'; document.getElementById('start-btn').style.visibility = 'visible'; alert('Game Over! Score: ' + score); }
 </script>
 </body>
 </html>
